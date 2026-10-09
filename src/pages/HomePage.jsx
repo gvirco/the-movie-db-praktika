@@ -1,42 +1,29 @@
+import { useState } from 'react'
 import Header from '../components/Header'
+import { MovieDiscovery } from '../features/movie-discovery/MovieDiscovery'
+import MovieLists from '../features/movie-lists/MovieLists'
+import { getMovieLists } from '../features/movie-lists/api'
+import { UsersManager } from '../features/users/UsersManager'
 import '../App.css'
 
-const sections = [
-  {
-    title: 'Movie Search',
-    description: 'Search for movies will be added here in a future iteration.',
-  },
-  {
-    title: 'My Movies',
-    description: 'Your personal movie collection will appear here.',
-  },
-  {
-    title: 'Watchlists',
-    description: 'Your saved watchlists will appear here.',
-  },
-]
-
 function HomePage() {
-  return (
-    <div className="app-shell">
-      <Header />
-      <main className="main-content">
-        <section className="intro" aria-labelledby="welcome-heading">
-          <h2 id="welcome-heading">Your movie space</h2>
-          <p>MovieMatch is ready for the group to build on.</p>
-        </section>
-
-        <div className="section-grid">
-          {sections.map((section) => (
-            <section className="placeholder-section" key={section.title}>
-              <h3>{section.title}</h3>
-              <p>{section.description}</p>
-            </section>
-          ))}
-        </div>
-      </main>
-    </div>
-  )
+  const [page, setPage] = useState('Discover Movies')
+  const [user, setUser] = useState(null)
+  const [list, setList] = useState(null)
+  const [pendingMovie, setPendingMovie] = useState(null)
+  function chooseUser(nextUser) { setUser(nextUser); setList(null) }
+  async function validateUserDeletion(candidate) {
+    const lists = await getMovieLists(candidate.id)
+    if (lists.length) throw new Error('Delete this user’s ' + lists.length + ' movie list(s) first. This prevents orphaned lists and saved movies.')
+  }
+  function chooseMovie(movie) {
+    if (!user) { setPage('Users'); return }
+    setPendingMovie(movie); setPage('My Movies')
+  }
+  return <div className="app-shell"><Header activePage={page} onNavigate={setPage} user={user} list={list} /><main className="main-content">
+    {page === 'Discover Movies' && <MovieDiscovery onSelectMovie={chooseMovie} />}
+    {page === 'My Movies' && <MovieLists key={user?.id || 'no-user'} userId={user?.id} onSelectList={setList} pendingMovie={pendingMovie} onPendingMovieSaved={() => setPendingMovie(null)} />}
+    {page === 'Users' && <UsersManager selectedUserId={user?.id} onSelectUser={chooseUser} onBeforeDelete={validateUserDeletion} />}
+  </main></div>
 }
-
 export default HomePage

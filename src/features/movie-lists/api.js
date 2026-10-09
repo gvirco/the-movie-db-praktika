@@ -34,6 +34,19 @@ function records(data) {
   return data ? [data] : []
 }
 
+async function getRecord(url, id) {
+  const data = await request(collectionUrl(url, id))
+  const record = records(data)[0]
+  if (!record) throw new Error('The selected item no longer exists.')
+  return record
+}
+
+function withoutId(record) {
+  const fields = { ...record }
+  delete fields.id
+  return fields
+}
+
 export async function getMovieLists(userId) {
   const data = await request(collectionUrl(LISTS_URL))
   return records(data).filter((list) => String(list.userId) === String(userId))
@@ -45,16 +58,17 @@ export async function createMovieList({ userId, name }) {
   if (!cleanName) throw new Error('List name cannot be empty.')
   return request(collectionUrl(LISTS_URL), {
     method: 'POST',
-    body: JSON.stringify({ userId, name: cleanName }),
+    body: JSON.stringify({ userId: String(userId), name: cleanName }),
   })
 }
 
 export async function updateMovieList(id, changes) {
   const name = changes.name?.trim()
   if (changes.name !== undefined && !name) throw new Error('List name cannot be empty.')
+  const current = await getRecord(LISTS_URL, id)
   return request(collectionUrl(LISTS_URL, id), {
-    method: 'PATCH',
-    body: JSON.stringify({ ...changes, ...(name ? { name } : {}) }),
+    method: 'PUT',
+    body: JSON.stringify({ ...withoutId(current), ...changes, ...(name ? { name } : {}), userId: String(current.userId) }),
   })
 }
 
@@ -69,7 +83,7 @@ export async function getSavedMovies(listId) {
   return records(data).filter((movie) => String(movie.listId) === String(listId))
 }
 
-export async function createSavedMovie({ listId, tmdbId, status = 'Want to Watch', rating = '', notes = '' }) {
+export async function createSavedMovie({ listId, tmdbId, status = 'Want to Watch', rating = '' }) {
   if (!listId) throw new Error('Choose a movie list first.')
   const cleanTmdbId = String(tmdbId).trim()
   if (!/^\d+$/.test(cleanTmdbId)) throw new Error('Enter a valid numeric TMDB ID.')
@@ -87,22 +101,32 @@ export async function createSavedMovie({ listId, tmdbId, status = 'Want to Watch
 
   return request(collectionUrl(SAVED_MOVIES_URL), {
     method: 'POST',
-    body: JSON.stringify({ listId, tmdbId: Number(cleanTmdbId), status, rating: rating === '' ? '' : Number(rating), notes }),
+    body: JSON.stringify({
+      listId: String(listId),
+      tmdbId: cleanTmdbId,
+      status,
+      ...(rating === '' ? {} : { rating: Number(rating) }),
+    }),
   })
 }
 
 export async function updateSavedMovie(id, changes) {
   const next = { ...changes }
-  if (next.rating !== undefined && next.rating !== '') {
+  if (next.rating === '') {
+    delete next.rating
+  } else if (next.rating !== undefined) {
     const rating = Number(next.rating)
     if (!Number.isFinite(rating) || rating < 1 || rating > 10) {
       throw new Error('Rating must be a number from 1 to 10.')
     }
     next.rating = rating
   }
+  const current = await getRecord(SAVED_MOVIES_URL, id)
+  const currentFields = withoutId(current)
+  delete currentFields.notes
   return request(collectionUrl(SAVED_MOVIES_URL, id), {
-    method: 'PATCH',
-    body: JSON.stringify(next),
+    method: 'PUT',
+    body: JSON.stringify({ ...currentFields, ...next, listId: String(current.listId), tmdbId: String(current.tmdbId) }),
   })
 }
 
