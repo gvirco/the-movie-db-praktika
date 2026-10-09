@@ -47,6 +47,7 @@
 .movie-lists__input-row button { flex-shrink: 0; padding: 0 14px; border: 0; border-radius: 7px; color: #fff; background: var(--ml-accent); font-size: 12px; font-weight: 700; }
 .movie-lists__movies { display: grid; grid-template-columns: repeat(auto-fill, minmax(235px, 1fr)); gap: 12px; margin-top: 15px; }
 .movie-lists__movie-card { min-width: 0; padding: 14px; border: 1px solid var(--ml-border); border-radius: 10px; background: white; }
+.movie-lists__poster { width: 100%; height: 180px; margin-bottom: 12px; border-radius: 7px; object-fit: cover; background: #e9eaf0; }
 .movie-lists__movie-top { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
 .movie-lists__movie-icon { display: grid; place-items: center; width: 34px; height: 34px; flex: 0 0 34px; border-radius: 9px; color: #bf6f52; background: #fbede6; font-size: 11px; }
 .movie-lists__movie-title { min-width: 0; flex: 1; }
